@@ -1,0 +1,194 @@
+Turbo Assembler	 Version 3.2	    12/04/18 01:35:55	    Page 1
+LERBKSPC.ASm
+
+
+
+      1					      assume cs:codigo,ds:dados,es:dados,ss:pilha
+      2
+      3	      =000D		     CR	       EQU    0DH ; caractere ASCII "Carriage Return"
+      4	      =000A		     LF	       EQU    0AH ; caractere ASCII "Line Feed"
+      5	      =0008		     BKSPC     EQU    08H ; caractere ASCII "Backspace"
+      6	      =001B		     ESCP      EQU    27  ; caractere ASCII "Escape"
+      7	      =000D		     ENTER     EQU    13  ; caractere ASCII "Enter"
+*Warning* LERBKSPC.ASm(7) Reserved word	used as	symbol:	ENTER
+      8
+      9				     ; SEGMENTO	DE DADOS DO PROGRAMA
+     10	0000			     dados     segment
+     11	0000  40*(??)		     nome      db 64 dup (?)
+     12	0040  80*(??)		     buffer    db 128 dup (?)
+     13	00C0  4E 6F 6D 65 20 64	6F+  pede_nome db 'Nome	do arquivo: ','$'
+     14	      20 61 72 71 75 69	76+
+     15	      6F 3A 20 24
+     16	00D2  45 72 72 6F 21 20	52+  erro      db 'Erro! Repita.',CR,LF,'$'
+     17	      65 70 69 74 61 2E	0D+
+     18	      0A 24
+     19	00E2  46 69 6D 20 64 6F	20+  msg_final db 'Fim do programa.',CR,LF,'$'
+     20	      70 72 6F 67 72 61	6D+
+     21	      61 2E 0D 0A 24
+     22	00F5  ????		     handler   dw ?
+     23	00F7			     dados     ends
+     24
+     25				     ; SEGMENTO	DE PILHA DO PROGRAMA
+     26	0000			     pilha    segment stack ; permite inicializacao automatica de SS:SP
+     27	0000  80*(????)			      dw     128 dup(?)
+     28	0100			     pilha    ends
+     29
+     30				     ; SEGMENTO	DE C�DIGO DO PROGRAMA
+     31	0000			     codigo   segment
+     32	0000			     inicio:	     ; CS e IP sao inicializados com este endereco
+     33	0000  B8 0000s			      mov    ax,dados		; inicializa DS
+     34	0003  8E D8			      mov    ds,ax		; com endereco do segmento DADOS
+     35	0005  8E C0			      mov    es,ax		; idem em ES
+     36				     ; fim da carga inicial dos	registradores de segmento
+     37				     ;
+     38				     ; pede nome do arquivo
+     39	0007  BA 00C0r		     de_novo: lea    dx,pede_nome ; endereco da	mensagem em DX
+     40	000A  B4 09			      mov    ah,9     ;	funcao exibir mensagem no AH
+     41	000C  CD 21			      int    21h      ;	chamada	do DOS
+     42				     ; le nome do arquivo
+     43	000E  BF 0000r			      lea    di, nome
+     44	0011  B4 01		     entrada: mov    ah,1
+     45	0013  CD 21			      int    21h     ; le um caractere com eco
+     46
+     47	0015  3C 0D			      cmp    al,ENTER	; compara com carriage return
+     48	0017  75 03			      jne    depois
+     49	0019  E9 0082			      jmp    terminar
+     50	001C			     depois:
+     51	001C  3C 0D			      cmp    al,CR   ; compara com carriage return
+     52	001E  74 26			      je     continua
+     53
+     54	0020  3C 08			      cmp    al,BKSPC	; compara com 'backspace'
+     55	0022  74 05			      je     backspace
+     56
+Turbo Assembler	 Version 3.2	    12/04/18 01:35:55	    Page 2
+LERBKSPC.ASm
+
+
+
+     57	0024  88 05			      mov    [di],al ; coloca no buffer
+     58	0026  47			      inc    di
+     59	0027  EB E8			      jmp    entrada
+     60
+     61	0029			     backspace:
+     62	0029  81 FF 0000r		      cmp    di,offset nome
+     63	002D  75 08			      jne    adiante
+     64	002F  B2 20			      mov    dl,' '  ; avanca cursor na	tela
+     65	0031  B4 02			      mov    ah,2
+     66	0033  CD 21			      int    21h
+     67	0035  EB DA			      jmp    entrada
+     68	0037			     adiante:
+     69	0037  B2 20			      mov    dl,' ' ; apaga ultimo caractere digitado
+     70	0039  B4 02			      mov    ah,2
+     71	003B  CD 21			      int    21h
+     72	003D  B2 08			      mov    dl,BKSPC ;	recua cusor na tela
+     73	003F  B4 02			      mov    ah,2
+     74	0041  CD 21			      int    21h
+     75	0043  4F			      dec    di
+     76	0044  EB CB			      jmp    entrada
+     77
+     78	0046			     continua:
+     79	0046  C6 05 00			      mov    byte ptr [di],0  ;	forma string ASCIIZ com	o nome do arquivo
+     80	0049  B2 0A			      mov    dl,LF   ; escreve LF na tela
+     81	004B  B4 02			      mov    ah,2
+     82	004D  CD 21			      int    21h
+     83				     ;
+     84				     ; abre arquivo para leitura
+     85	004F  B4 3D			      mov    ah,3dh
+     86	0051  B0 00			      mov    al,0
+     87	0053  BA 0000r			      lea    dx,nome
+     88	0056  CD 21			      int 21h
+     89	0058  73 09			      jnc    abriu_ok
+     90	005A  BA 00D2r			      lea    dx,erro  ;	endereco da mensagem em	DX
+     91	005D  B4 09			      mov    ah,9     ;	funcao exibir mensagem no AH
+     92	005F  CD 21			      int    21h      ;	chamada	do DOS
+     93	0061  EB A4			      jmp    de_novo
+     94				     ;
+     95	0063  A3 00F5r		     abriu_ok: mov handler,ax
+     96	0066  B4 3F		     laco:    mov ah,3fh      ;	le um caracter do arquivo
+     97	0068  8B 1E 00F5r		      mov bx,handler
+     98	006C  B9 0001			      mov cx,1
+     99	006F  BA 0040r			      lea dx,buffer
+    100	0072  CD 21			      int 21h
+    101	0074  3B C1			      cmp ax,cx
+    102	0076  75 17			      jne fim
+    103	0078  8A 16 0040r		      mov dl, buffer  ;	escreve	caracter na tela
+    104	007C  B4 02			      mov ah,2
+    105	007E  CD 21			      int 21h
+    106				     ;
+    107	0080  8A 16 0040r		      mov dl, buffer  ;	escreve	na tela	at� encontrar	um LF (fim de linha)
+    108	0084  80 FA 0A			      cmp dl, LF
+    109	0087  75 DD			      jne laco
+    110				     ;
+    111	0089  B4 08			      mov ah,8	      ;	espera pela digitacao de uma tecla qualquer
+    112	008B  CD 21			      int 21h
+    113	008D  EB D7			      jmp laco
+Turbo Assembler	 Version 3.2	    12/04/18 01:35:55	    Page 3
+LERBKSPC.ASm
+
+
+
+    114				     ;
+    115	008F  B4 3E		     fim:     mov ah,3eh      ;	fecha arquivo
+    116	0091  8B 1E 00F5r		      mov bx,handler
+    117	0095  CD 21			      int 21h
+    118				     ;
+    119	0097  BA 00E2r			      lea    dx,msg_final ; endereco da	mensagem em DX
+    120	009A  B4 09			      mov    ah,9     ;	funcao exibir mensagem no AH
+    121	009C  CD 21			      int    21h      ;	chamada	do DOS
+    122	009E			     terminar:
+    123	009E  B8 4C00			      mov    ax,4c00h ;	funcao retornar	ao DOS no AH
+    124							      ;	codigo de retorno 0 no AL
+    125	00A1  CD 21			      int    21h      ;	chamada	do DOS
+    126	00A3			     codigo   ends
+    127					      end    inicio
+Turbo Assembler	 Version 3.2	    12/04/18 01:35:55	    Page 4
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "12/04/18"
+??FILENAME			  Text	 "LERBKSPC"
+??TIME				  Text	 "01:35:55"
+??VERSION			  Number 0314
+@CPU				  Text	 0101H
+@CURSEG				  Text	 CODIGO
+@FILENAME			  Text	 LERBKSPC
+@WORDSIZE			  Text	 2
+ABRIU_OK			  Near	 CODIGO:0063
+ADIANTE				  Near	 CODIGO:0037
+BACKSPACE			  Near	 CODIGO:0029
+BKSPC				  Number 0008
+BUFFER				  Byte	 DADOS:0040
+CONTINUA			  Near	 CODIGO:0046
+CR				  Number 000D
+DEPOIS				  Near	 CODIGO:001C
+DE_NOVO				  Near	 CODIGO:0007
+ENTER				  Number 000D
+ENTRADA				  Near	 CODIGO:0011
+ERRO				  Byte	 DADOS:00D2
+ESCP				  Number 001B
+FIM				  Near	 CODIGO:008F
+HANDLER				  Word	 DADOS:00F5
+INICIO				  Near	 CODIGO:0000
+LACO				  Near	 CODIGO:0066
+LF				  Number 000A
+MSG_FINAL			  Byte	 DADOS:00E2
+NOME				  Byte	 DADOS:0000
+PEDE_NOME			  Byte	 DADOS:00C0
+TERMINAR			  Near	 CODIGO:009E
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+CODIGO				  16  00A3 Para	  none
+DADOS				  16  00F7 Para	  none
+PILHA				  16  0100 Para	  Stack
+Turbo Assembler	 Version 3.2	    12/04/18 01:35:55	    Page 5
+Error Summary
+
+
+
+*Warning* LERBKSPC.ASm(7) Reserved word	used as	symbol:	ENTER
+

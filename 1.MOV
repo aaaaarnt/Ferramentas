@@ -1,0 +1,12 @@
+INICIO = 0,0
+MOVE = 10,w
+MOVE=20 , S
+Move=30 ,a
+Move =40, D
+move=32757,d
+move=1,d
+move=32758,s
+move=1,s
+move=32767,d
+move=32767,s
+fim

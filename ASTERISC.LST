@@ -1,0 +1,106 @@
+Turbo Assembler	 Version 3.2	    12/03/18 24:22:35	    Page 1
+ASTERISC.ASM
+
+
+
+      1					      assume cs:codigo,ds:dados,es:dados,ss:pilha
+      2
+      3	      =000D		     CR	      EQU    0DH ; constante - codigo ASCII do caractere "carriage return"
+      4	      =000A		     LF	      EQU    0AH ; constante - codigo ASCII do caractere "line feed"
+      5
+      6				     ; definicao do segmento de	dados do programa
+      7	0000			     dados    segment
+      8	0000  4D 65 75 20 74 65	72+  mensagem db     'Meu terceiro programa em ASSEMBLER 8086 funciona !!! '
+      9	      63 65 69 72 6F 20	70+
+     10	      72 6F 67 72 61 6D	61+
+     11	      20 65 6D 20 41 53	53+
+     12	      45 4D 42 4C 45 52	20+
+     13	      38 30 38 36 20 66	75+
+     14	      6E 63 69 6F 6E 61	20+
+     15	      21 21 21 20
+     16						     ; note: a mensagem	termina	com espaco !
+     17	0035  0D 0A 24		     fimlinha db     CR,LF,'$'
+     18	0038  38*(??)		     msg2     db     56	dup(?)
+     19	0070			     dados    ends
+     20
+     21				     ; definicao do segmento de	pilha do programa
+     22	0000			     pilha    segment stack ; permite inicializacao automatica de SS:SP
+     23	0000  80*(????)			      dw     128 dup(?)
+     24	0100			     pilha    ends
+     25
+     26				     ; definicao do segmento de	codigo do programa
+     27	0000			     codigo   segment
+     28	0000			     inicio:  ;	CS e IP	sao inicializados com este endereco
+     29	0000  B8 0000s			      mov    ax,dados ;	inicializa DS
+     30	0003  8E D8			      mov    ds,ax    ;	com endereco do	segmento DADOS
+     31	0005  8E C0			      mov    es,ax    ;	idem em	ES
+     32				     ; fim da carga inicial dos	registradores de segmento
+     33
+     34				     ; a partir	daqui, as instrucoes especificas para cada programa
+     35				     ; Neste exemplo, o	programa apenas	exibe uma mensagem na tela,
+     36				     ; substitui todos os espacos da mensagem por *,
+     37				     ; exibe a mensagem	midificada na tela
+     38				     ; e devolve o controle para o sistema operacional (DOS)
+     39
+     40	0007  BA 0000r			      lea    dx,mensagem	  ; endereco da	mensagem original em DX
+     41	000A  B4 09			      mov    ah,9		  ; funcao exibir mensagem no AH
+     42	000C  CD 21			      int    21h		  ; chamada do DOS
+     43
+     44	000E  B9 0035			      mov    cx,53		  ; tamanho da mensagem	sem o CR,LF,'$'
+     45	0011  BF 0000r			      lea    di,mensagem
+     46	0014  B0 20			      mov    al,' '		  ; procurar espacos ('	' ou 20H)
+     47	0016			     repetir:
+     48	0016  F2> AE			      repne  scasb		  ; repete enquanto nao	for espaco
+     49	0018  75 08			      jne    parar		  ; parou sem encontrar	espaco - fim do	string
+     50	001A  C6 45 FF 2A		      mov    byte ptr [di-1],'*'  ; substitui espaco por *
+     51	001E  E3 02			      jcxz   parar		  ; espaco era o ultimo	caractere no string
+     52	0020  EB F4			      jmp    repetir		  ; senao, vai procurar	o proximo espaco
+     53	0022			     parar:
+     54	0022  BA 0000r			      lea    dx,mensagem	  ; endereco da	mensagem modificada em DX
+     55	0025  B4 09			      mov    ah,9		  ; funcao exibir mensagem no AH
+     56	0027  CD 21			      int    21h		  ; chamada do DOS
+     57
+Turbo Assembler	 Version 3.2	    12/03/18 24:22:35	    Page 2
+ASTERISC.ASM
+
+
+
+     58				     ; retorno ao DOS com codigo de retorno 0 no AL (fim normal)
+     59	0029  B8 4C00			      mov    ax,4c00h		  ; funcao retornar ao DOS no AH
+     60	002C  CD 21			      int    21h		  ; chamada do DOS
+     61
+     62	002E			     codigo   ends
+     63
+     64				     ; a diretiva a seguir indica o fim	do codigo fonte	(ultima	linha do arquivo)
+     65					      end    inicio ; para o programa iniciar em "inicio" quando for executado
+Turbo Assembler	 Version 3.2	    12/03/18 24:22:35	    Page 3
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "12/03/18"
+??FILENAME			  Text	 "ASTERISC"
+??TIME				  Text	 "24:22:35"
+??VERSION			  Number 0314
+@CPU				  Text	 0101H
+@CURSEG				  Text	 CODIGO
+@FILENAME			  Text	 ASTERISC
+@WORDSIZE			  Text	 2
+CR				  Number 000D
+FIMLINHA			  Byte	 DADOS:0035
+INICIO				  Near	 CODIGO:0000
+LF				  Number 000A
+MENSAGEM			  Byte	 DADOS:0000
+MSG2				  Byte	 DADOS:0038
+PARAR				  Near	 CODIGO:0022
+REPETIR				  Near	 CODIGO:0016
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+CODIGO				  16  002E Para	  none
+DADOS				  16  0070 Para	  none
+PILHA				  16  0100 Para	  Stack
+

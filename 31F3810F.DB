@@ -1,0 +1,5 @@
+Please send this file to Borland International.
+
+
+; IBM COMPATIBLE 486 BIOS COPYRIGHT The DOSBox Team.
+db_entry 002h 002h 004h 00000h 00000h 031F3810Fh 000h 00000h 00000h

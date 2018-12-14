@@ -1,0 +1,156 @@
+Turbo Assembler	 Version 3.2	    12/03/18 24:28:59	    Page 1
+DESENHO1.ASM
+
+
+
+      1					      assume cs:codigo,ds:dados,es:dados,ss:pilha
+      2
+      3	      =000D		     CR	      EQU    0DH ; constante - codigo ASCII do caractere "carriage return"
+      4	      =000A		     LF	      EQU    0AH ; constante - codigo ASCII do caractere "line feed"
+      5
+      6				     ; definicao do segmento de	dados do programa
+      7	0000			     dados     segment
+      8	0000  2A 24		     asterisco db    '*$'
+      9	0002  17		     atributo  db    17h ; fundo azul (1), texto em cinza claro	(7)
+     10	0003			     dados     ends
+     11
+     12				     ; definicao do segmento de	pilha do programa
+     13	0000			     pilha    segment stack ; permite inicializacao automatica de SS:SP
+     14	0000  80*(????)			      dw     128 dup(?)
+     15	0100			     pilha    ends
+     16
+     17				     ; definicao do segmento de	codigo do programa
+     18	0000			     codigo   segment
+     19	0000			     inicio:  ;	CS e IP	sao inicializados com este endereco
+     20	0000  B8 0000s			      mov    ax,dados ;	inicializa DS
+     21	0003  8E D8			      mov    ds,ax    ;	com endereco do	segmento DADOS
+     22	0005  8E C0			      mov    es,ax    ;	idem em	ES
+     23				     ; fim da carga inicial dos	registradores de segmento
+     24
+     25				     ; a partir	daqui, as instrucoes especificas para este programa
+     26				     ; usando a	rolagem	de janela para limpar toda a tela
+     27				     ; como se fosse uma janela	desde (0,0) at� (24,79)
+     28	0007			     rolartela:
+     29	0007  B0 00			       mov   al,0	 ; rolar todas as linhas da janela
+     30					       ;mov   bh,atributo ; inserir novas linhas com este atributo
+     31	0009  B5 00			       mov   ch,0	 ; linha do canto superior esquerdo da janela
+     32	000B  B1 00			       mov   cl,0	 ; coluna do canto superior esquerdo da	janela
+     33	000D  B6 18			       mov   dh,24	 ; linha do canto inferior direito da janela
+     34	000F  B2 4F			       mov   dl,79	 ; coluna do canto inferior direito da janela
+     35	0011  B4 06			       mov   ah,6	 ; rolar janela	para cima
+     36	0013  CD 10			       int   10h	 ; executa rolagem
+     37
+     38				     ; exemplo de instru��es para posicionar cursor
+     39	0015  B6 00			       mov   dh,0	 ; linha 0
+     40	0017  B2 00			       mov   dl,0	 ; coluna 0
+     41	0019  E8 0009			       call  poscursor	 ; posiciona cursor na posicao (0,0) da	tela
+     42
+     43				     ;	exemplo	de instru��o para escrever um '*' na posicao em que	esta o cursor
+     44	001C  E8 000D			       call  asterisca	 ; escreve um '*' nesta	posicao
+     45
+     46				     ; substitua os exemplos acima por uma serie de instrucoes que "desenhe"
+     47				     ; com asteriscos na tela o	seguinte (configure p�gina para paisagem):
+     48				     ;		   1	     2	       3	 4	   5	     6	       7
+     49				     ;	 01234567890123456789012345678901234567890123456789012345678901234567890123456789
+     50				     ;	0*										* 0
+     51				     ;	1 *									       *  1
+     52				     ;	2  *									      *	  2
+     53				     ;	3   *									     *	  3
+     54				     ;	4    *									    *	  4
+     55				     ;	5     *									   *	  5
+     56				     ;	6      *								  *	  6
+     57				     ;	7	*								 *	  7
+Turbo Assembler	 Version 3.2	    12/03/18 24:28:59	    Page 2
+DESENHO1.ASM
+
+
+
+     58				     ;	8	 *								*	  8
+     59				     ;	9	  *							       *	  9
+     60				     ; 10	   *							      *		 10
+     61				     ; 11	    *							     *		 11
+     62				     ; 12	     ********************************************************		 12
+     63				     ; 13	    *							     *		 13
+     64				     ; 14	   *							      *		 14
+     65				     ; 15	  *							       *	 15
+     66				     ; 16	 *								*	 16
+     67				     ; 17	*								 *	 17
+     68				     ; 18      *								  *	 18
+     69				     ; 19     *									   *	 19
+     70				     ; 20    *									    *	 20
+     71				     ; 21   *									     *	 21
+     72				     ; 22  *									      *	 22
+     73				     ; 23 *									       * 23
+     74				     ; 24*										*24
+     75				     ;	 01234567890123456789012345678901234567890123456789012345678901234567890123456789
+     76				     ;		   1	     2	       3	 4	   5	     6	       7
+     77
+     78
+     79				     ; antes de	terminar o programa, espera que	uma tecla seja pressionada
+     80				     ; para que	o usuario possa	apreciar a "obra de arte"  :-)
+     81	001F  E8 0012			       call  espera_tecla
+     82	0022  EB 15 90			       jmp   fim	 ; vai terminar	o programa
+     83
+     84	0025			     poscursor proc ; posiciona	o cursor na linha dada por DH e	coluna dada por	DL
+     85	0025  B4 02			       mov    ah,2	 ; funcao posicionar cursor
+     86	0027  B7 00			       mov    bh,0	 ; pagina 0 da memoria da placa	de video
+     87	0029  CD 10			       int    10h	 ; chama o servico do BIOS
+     88	002B  C3			       ret
+     89	002C			     poscursor endp
+     90
+     91	002C			     asterisca proc ; escreve um '*' na	tela, na posicao onde esta o cursor
+     92	002C  BA 0000r			       lea    dx,asterisco ; endereco da mensagem (terminada por $) em DX
+     93	002F  B4 09			       mov    ah,9	   ; funcao exibir mensagem no AH
+     94	0031  CD 21			       int    21h	   ; chamada do	DOS
+     95	0033  C3			       ret
+     96	0034			     asterisca endp
+     97
+     98	0034			     espera_tecla proc ; espera	at� uma tecla	qualquer ser pressionada e retorna
+     99	0034  B4 08			       mov    ah,8	   ; ler caractere sem ecoar na	tela
+    100	0036  CD 21			       int    21h	   ; chama servico do DOS
+    101	0038  C3			       ret		   ; qualquer que seja a tecla,	retorna
+    102	0039			     espera_tecla endp
+    103
+    104				     ; retorno ao DOS com codigo de retorno 0 no AL (fim normal)
+    105	0039			     fim:
+    106	0039  B8 4C00			      mov    ax,4c00h		; funcao retornar ao DOS no AH
+    107	003C  CD 21			      int    21h		; chamada do DOS
+    108
+    109	003E			     codigo   ends
+    110
+    111				     ; a diretiva a seguir indica o fim	do codigo fonte	(ultima	linha do arquivo)
+    112				     ; e informa que o programa	deve comecar a execucao	no rotulo "inicio"
+    113					      end    inicio
+Turbo Assembler	 Version 3.2	    12/03/18 24:28:59	    Page 3
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "12/03/18"
+??FILENAME			  Text	 "DESENHO1"
+??TIME				  Text	 "24:28:59"
+??VERSION			  Number 0314
+@CPU				  Text	 0101H
+@CURSEG				  Text	 CODIGO
+@FILENAME			  Text	 DESENHO1
+@WORDSIZE			  Text	 2
+ASTERISCA			  Near	 CODIGO:002C
+ASTERISCO			  Byte	 DADOS:0000
+ATRIBUTO			  Byte	 DADOS:0002
+CR				  Number 000D
+ESPERA_TECLA			  Near	 CODIGO:0034
+FIM				  Near	 CODIGO:0039
+INICIO				  Near	 CODIGO:0000
+LF				  Number 000A
+POSCURSOR			  Near	 CODIGO:0025
+ROLARTELA			  Near	 CODIGO:0007
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+CODIGO				  16  003E Para	  none
+DADOS				  16  0003 Para	  none
+PILHA				  16  0100 Para	  Stack
+

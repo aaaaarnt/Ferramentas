@@ -1,0 +1,440 @@
+Turbo Assembler	 Version 3.2	    12/04/18 00:45:20	    Page 1
+VIDEO.ASM
+
+
+
+      1				     ; Este programa demonstra o uso de	algumas	funcoes	do BIOS	para o video.
+      2				     ; Todas as	funcoes	demonstradas aqui sao chamadas atraves da INT 10H:
+      3				     ;	   AH =	2 Posiciona o cursor: DH = linha (0 a 24), DL =	coluna (0 a 79)
+      4				     ;	   AH =	6 Rola uma janela para cima, definindo atributos de cor
+      5				     ;	   AH =	9 Define atributos e escreve um	caractere sem mover o cursor
+      6				     ; Os atributos de cores sao representados por valores de 1	byte:
+      7				     ;	   bit 7: 0 = estatico,	1 = piscante
+      8				     ;	   bits	6 a 4: cor do fundo (000 a 111)
+      9				     ;	   bits	3 a 0: cor do texto (0000 a 1111)
+     10				     ; As cores	da palheta padrao (que pode ser	alterada) sao as seguintes:
+     11				     ;	   0000	(0h) = Preto		 1000 (8h) = Cinza escuro
+     12				     ;	   0001	(1h) = Azul		 1001 (9h) = Azul claro
+     13				     ;	   0010	(2h) = Verde		 1010 (Ah) = Verde claro
+     14				     ;	   0011	(3h) = Ciano		 1011 (Bh) = Ciano claro
+     15				     ;	   0100	(4h) = Vermelho		 1100 (Ch) = Vermelho claro
+     16				     ;	   0101	(5h) = Magenta		 1101 (Dh) = Magenta claro
+     17				     ;	   0110	(6h) = Marrom		 1110 (Eh) = Amarelo
+     18				     ;	   0111	(7h) = Cinza claro	 1111 (Fh) = Branco
+     19				     ;	   Nota: as cores de 8h	a Fh so	podem ser usadas para texto, pois
+     20				     ;	   seus	codigos	possuem	o bit 7	= 1, o que faz o texto piscar
+     21				     ;	   (este efeito	pode ser observado na parte final desta	demonstracao,
+     22				     ;	    onde sao usadas cores de fundo e de	texto de 0h a Fh)
+     23
+     24					      assume cs:codigo,ds:dados,es:dados,ss:pilha
+     25
+     26	      =000D		     CR	      EQU    0DH ; constante - codigo ASCII do caractere "carriage return"
+     27	      =000A		     LF	      EQU    0AH ; constante - codigo ASCII do caractere "line feed"
+     28
+     29				     ; definicao do segmento de	dados do programa
+     30	0000			     dados    segment
+     31	0000  56 6F 63 65 20 69	72+  msg1     db     'Voce ira'' ver varias mensagens.',CR,LF
+     32	      61 27 20 76 65 72	20+
+     33	      76 61 72 69 61 73	20+
+     34	      6D 65 6E 73 61 67	65+
+     35	      6E 73 2E 0D 0A
+     36	0021  44 65 70 6F 69 73	20+	      db     'Depois de	cada uma, pressione qualquer tecla',CR,LF
+     37	      64 65 20 63 61 64	61+
+     38	      20 75 6D 61 2C 20	70+
+     39	      72 65 73 73 69 6F	6E+
+     40	      65 20 71 75 61 6C	71+
+     41	      75 65 72 20 74 65	63+
+     42	      6C 61 0D 0A
+     43	004F  70 61 72 61 20 70	72+	      db     'para prosseguir.',CR,LF,CR,LF
+     44	      6F 73 73 65 67 75	69+
+     45	      72 2E 0D 0A 0D 0A
+     46	0063  45 6D 20 70 72 69	6D+	      db     'Em primeiro lugar, a tela	sera'' limpa,',CR,LF
+     47	      65 69 72 6F 20 6C	75+
+     48	      67 61 72 2C 20 61	20+
+     49	      74 65 6C 61 20 73	65+
+     50	      72 61 27 20 6C 69	6D+
+     51	      70 61 2C 0D 0A
+     52	008B  6D 61 73 20 6F 62	73+	      db     'mas observe o que	ocorre com o cursor...','$'
+     53	      65 72 76 65 20 6F	20+
+     54	      71 75 65 20 6F 63	6F+
+     55	      72 72 65 20 63 6F	6D+
+     56	      20 6F 20 63 75 72	73+
+     57	      6F 72 2E 2E 2E 24
+Turbo Assembler	 Version 3.2	    12/04/18 00:45:20	    Page 2
+VIDEO.ASM
+
+
+
+     58	00B4  41 67 6F 72 61 20	6F+  msg2     db     'Agora o cursor vai para o	canto superior esquerdo','$'
+     59	      20 63 75 72 73 6F	72+
+     60	      20 76 61 69 20 70	61+
+     61	      72 61 20 6F 20 63	61+
+     62	      6E 74 6F 20 73 75	70+
+     63	      65 72 69 6F 72 20	65+
+     64	      73 71 75 65 72 64	6F+
+     65	      24
+     66	00E6  41 20 73 65 67 75	69+  msg3     db     'A	seguir,	alguns testes..... (depois de limpar a tela)','$'
+     67	      72 2C 20 61 6C 67	75+
+     68	      6E 73 20 74 65 73	74+
+     69	      65 73 2E 2E 2E 2E	2E+
+     70	      20 28 64 65 70 6F	69+
+     71	      73 20 64 65 20 6C	69+
+     72	      6D 70 61 72 20 61	20+
+     73	      74 65 6C 61 29 24
+     74	011D  41 20 73 65 67 75	69+  msg4     db     'A	seguir,	16 testes de cores.....	','$'
+     75	      72 2C 20 31 36 20	74+
+     76	      65 73 74 65 73 20	64+
+     77	      65 20 63 6F 72 65	73+
+     78	      2E 2E 2E 2E 2E 20	24
+     79	0140  50 72 65 74 6F 24	     cor0     db     'Preto','$'	  ; preto	   =  0
+     80	0146  41 7A 75 6C 24	     cor1     db     'Azul','$'		  ; azul	   =  1
+     81	014B  56 65 72 64 65 24	     cor2     db     'Verde','$'	  ; verde	   =  2
+     82	0151  43 69 61 6E 6F 24	     cor3     db     'Ciano','$'	  ; ciano	   =  3
+     83	0157  56 65 72 6D 65 6C	68+  cor4     db     'Vermelho','$'	  ; vermelho	   =  4
+     84	      6F 24
+     85	0160  4D 61 67 65 6E 74	61+  cor5     db     'Magenta','$'	  ; magenta	   =  5
+     86	      24
+     87	0168  4D 61 72 72 6F 6D	24   cor6     db     'Marrom','$'	  ; marrom	   =  6
+     88	016F  43 69 6E 7A 61 20	63+  cor7     db     'Cinza claro','$'	  ; cinza claro	   =  7
+     89	      6C 61 72 6F 24
+     90	017B  43 69 6E 7A 61 20	65+  cor8     db     'Cinza escuro','$'	  ; cinza escuro   =  8
+     91	      73 63 75 72 6F 24
+     92	0188  41 7A 75 6C 20 63	6C+  cor9     db     'Azul claro','$'	  ; azul claro	   =  9
+     93	      61 72 6F 24
+     94	0193  56 65 72 64 65 20	63+  cor10    db     'Verde claro','$'	  ; verde claro	   = 10
+     95	      6C 61 72 6F 24
+     96	019F  43 69 61 6E 6F 20	63+  cor11    db     'Ciano claro','$'	  ; ciano claro	   = 11
+     97	      6C 61 72 6F 24
+     98	01AB  56 65 72 6D 65 6C	68+  cor12    db     'Vermelho claro','$' ; vermelho claro = 12
+     99	      6F 20 63 6C 61 72	6F+
+    100	      24
+    101	01BA  4D 61 67 65 6E 74	61+  cor13    db     'Magenta claro','$'  ; magenta claro  = 13
+    102	      20 63 6C 61 72 6F	24
+    103	01C8  41 6D 61 72 65 6C	6F+  cor14    db     'Amarelo','$'	  ; amarelo	   = 14
+    104	      24
+    105	01D0  42 72 61 6E 63 6F	24   cor15    db     'Branco','$'	  ; branco	   = 15
+    106	01D7  0140r		     ecor     dw     cor0
+    107	01D9  0146r			      dw     cor1
+    108	01DB  014Br			      dw     cor2
+    109	01DD  0151r			      dw     cor3
+    110	01DF  0157r			      dw     cor4
+    111	01E1  0160r			      dw     cor5
+    112	01E3  0168r			      dw     cor6
+    113	01E5  016Fr			      dw     cor7
+    114	01E7  017Br			      dw     cor8
+Turbo Assembler	 Version 3.2	    12/04/18 00:45:20	    Page 3
+VIDEO.ASM
+
+
+
+    115	01E9  0188r			      dw     cor9
+    116	01EB  0193r			      dw     cor10
+    117	01ED  019Fr			      dw     cor11
+    118	01EF  01ABr			      dw     cor12
+    119	01F1  01BAr			      dw     cor13
+    120	01F3  01C8r			      dw     cor14
+    121	01F5  01D0r			      dw     cor15
+    122	01F7  43 6F 72 20 64 6F	20+  mfundo   db     'Cor do fundo: ','$'
+    123	      66 75 6E 64 6F 3A	20+
+    124	      24
+    125	0206  2C 20 63 6F 72 20	64+  mletra   db     ',	cor das	letras:	','$'
+    126	      61 73 20 6C 65 74	72+
+    127	      61 73 3A 20 24
+    128	0219  00		     letra    db     0
+    129	021A  00			      db     0
+    130	021B  00		     fundo    db     0
+    131	021C  00			      db     0
+    132	021D  0000		     corfundo dw     0
+    133	021F  0000		     corletra dw     0
+    134	0221			     dados    ends
+    135
+    136				     ; definicao do segmento de	pilha do programa
+    137	0000			     pilha    segment stack ; permite inicializacao automatica de SS:SP
+    138	0000  80*(????)			      dw     128 dup(?)
+    139	0100			     pilha    ends
+    140
+    141				     ; definicao do segmento de	codigo do programa
+    142	0000			     codigo   segment
+    143	0000			     inicio:  ;	CS e IP	sao inicializados com este endereco
+    144	0000  B8 0000s			      mov    ax,dados ;	inicializa DS
+    145	0003  8E D8			      mov    ds,ax    ;	com endereco do	segmento DADOS
+    146	0005  8E C0			      mov    es,ax    ;	idem em	ES
+    147				     ; fim da carga inicial dos	registradores de segmento
+    148
+    149				     ; a partir	daqui, as instrucoes especificas para cada programa
+    150	0007  BA 0000r			      lea     dx,msg1
+    151	000A  E8 0172			      call    write
+    152	000D  E8 0174			      call    espera_tecla
+    153				     ; limpa a tela
+    154	0010  B6 18			      mov     dh,24	   ; linha 24
+    155	0012  B2 4F			      mov     dl,79	   ; coluna 79
+    156	0014  B5 00			      mov     ch,0	   ; linha zero
+    157	0016  B1 00			      mov     cl,0	   ; coluna zero
+    158	0018  B7 07			      mov     bh,07h	   ; atributo de preenchimento (fundo preto e letras cinzas)
+    159	001A  B0 00			      mov     al,0	   ; numero de linhas (zero = toda a janela)
+    160	001C  B4 06			      mov     ah,6	   ; scroll window up
+    161	001E  CD 10			      int     10h	   ; chamada BIOS (video)
+    162	0020  BA 00B4r			      lea     dx,msg2
+    163	0023  E8 0159			      call    write
+    164	0026  E8 015B			      call    espera_tecla
+    165				     ; e posiciona cursor no canto superior direito
+    166	0029  B6 00			      mov     dh,0	     ; linha zero
+    167	002B  B2 00			      mov     dl,0	     ; coluna zero
+    168	002D  B7 00			      mov     bh,0	     ; numero da pagina	(zero =	primeira)
+    169	002F  B4 02			      mov     ah,2	   ; set cursor	position
+    170	0031  CD 10			      int     10h	   ; chamada BIOS (video)
+    171	0033  BA 00E6r			      lea     dx,msg3
+Turbo Assembler	 Version 3.2	    12/04/18 00:45:20	    Page 4
+VIDEO.ASM
+
+
+
+    172	0036  E8 0146			      call    write
+    173	0039  E8 0148			      call    espera_tecla
+    174				     ; limpa a tela e vai para 0,0
+    175	003C  B6 18			      mov     dh,24	     ; linha 24
+    176	003E  B2 4F			      mov     dl,79	   ; coluna 79
+    177	0040  B5 00			      mov     ch,0	     ; linha zero
+    178	0042  B1 00			      mov     cl,0	     ; coluna zero
+    179	0044  B7 07			      mov     bh,07h	   ; atributo de preenchimento (letras cinzas)
+    180	0046  B0 00			      mov     al,0	     ; numero de linhas	(zero =	toda a janela)
+    181	0048  B4 06			      mov     ah,6	   ; scroll window up
+    182	004A  CD 10			      int     10h	   ; chamada BIOS (video)
+    183				     ; e posiciona cursor no canto superior direito
+    184	004C  B6 00			      mov     dh,0	     ; linha zero
+    185	004E  B2 00			      mov     dl,0	     ; coluna zero
+    186	0050  B7 00			      mov     bh,0	     ; numero da pagina	(zero =	primeira)
+    187	0052  B4 02			      mov     ah,2	   ; set cursor	position
+    188	0054  CD 10			      int     10h	   ; chamada BIOS (video)
+    189	0056  E8 012B			      call    espera_tecla
+    190
+    191				     ; escreve caractere
+    192	0059  B9 0004			      mov    cx,4	     ; numero de vezes a escrever caracter
+    193	005C  B3 0F			      mov    bl,0fH	     ; atributo	(fundo preto e caracteres brancos)
+    194	005E  B7 00			      mov    bh,0	     ; numero da pagina	(zero =	primeira)
+    195	0060  B0 30			      mov    al, '0'
+    196	0062  B4 09			      mov    ah,9	   ; set cursor	position
+    197	0064  CD 10			      int    10h	   ; chamada BIOS (video)
+    198				     ; posiciona cursor	na linha 1, coluna 1
+    199	0066  B6 01			      mov    dh,1	     ; linha 1
+    200	0068  B2 01			      mov    dl,1	     ; coluna 1
+    201	006A  B7 00			      mov    bh,0	     ; numero da pagina	(zero =	primeira)
+    202	006C  B4 02			      mov    ah,2	   ; set cursor	position
+    203	006E  CD 10			      int    10h	   ; chamada BIOS (video)
+    204				     ; escreve caractere '1'
+    205	0070  B9 0004			      mov    cx,4	     ; numero de vezes a escrever caracter
+    206	0073  B3 07			      mov    bl,07H	     ; atributo	(fundo preto e caracteres cinzas)
+    207	0075  B7 00			      mov    bh,0	     ; numero da pagina	(zero =	primeira)
+    208	0077  B0 31			      mov    al,'1'
+    209	0079  B4 09			      mov    ah,9	   ; set cursor	position
+    210	007B  CD 10			      int    10h	   ; chamada BIOS (video)
+    211				     ; posiciona cursor	na linha 2, coluna 2
+    212	007D  B6 02			      mov    dh,2	     ; linha 2
+    213	007F  B2 02			      mov    dl,2	     ; coluna 2
+    214	0081  B7 00			      mov    bh,0	     ; numero da pagina	(zero =	primeira)
+    215	0083  B4 02			      mov    ah,2	   ; set cursor	position
+    216	0085  CD 10			      int    10h	   ; chamada BIOS (video)
+    217				     ; escreve caractere '2'
+    218	0087  B9 0004			      mov    cx,4	     ; numero de vezes a escrever caracter
+    219	008A  B3 F0			      mov    bl,0F0H	     ; atributo	(fundo branco e	caracteres pretos)
+    220	008C  B7 00			      mov    bh,0	     ; numero da pagina	(zero =	primeira)
+    221	008E  B0 32			      mov    al,'2'
+    222	0090  B4 09			      mov    ah,9	   ; set cursor	position
+    223	0092  CD 10			      int    10h	   ; chamada BIOS (video)
+    224				     ; posiciona cursor	na linha 3, coluna 10
+    225	0094  B6 03			      mov    dh,3	     ; linha 2
+    226	0096  B2 0A			      mov    dl,10	     ; coluna 2
+    227	0098  B7 00			      mov    bh,0	     ; numero da pagina	(zero =	primeira)
+    228	009A  B4 02			      mov    ah,2	   ; set cursor	position
+Turbo Assembler	 Version 3.2	    12/04/18 00:45:20	    Page 5
+VIDEO.ASM
+
+
+
+    229	009C  CD 10			      int    10h	   ; chamada BIOS (video)
+    230				     ; escreve caractere '3'
+    231	009E  B9 0004			      mov    cx,4	     ; numero de vezes a escrever caracter
+    232	00A1  B3 19			      mov    bl,19H	     ; atributo	(fundo azul e caracteres azul claro)
+    233	00A3  B7 00			      mov    bh,0	     ; numero da pagina	(zero =	primeira)
+    234	00A5  B0 33			      mov    al,'3'
+    235	00A7  B4 09			      mov    ah,9	   ; set cursor	position
+    236	00A9  CD 10			      int    10h	   ; chamada BIOS (video)
+    237				     ; posiciona cursor	na linha 4, coluna 20
+    238	00AB  B6 04			      mov    dh,4	     ; linha 2
+    239	00AD  B2 14			      mov    dl,20	     ; coluna 2
+    240	00AF  B7 00			      mov    bh,0	     ; numero da pagina	(zero =	primeira)
+    241	00B1  B4 02			      mov    ah,2	   ; set cursor	position
+    242	00B3  CD 10			      int    10h	   ; chamada BIOS (video)
+    243				     ; escreve caractere '4'
+    244	00B5  B9 0008			      mov    cx,8	     ; numero de vezes a escrever caracter
+    245	00B8  B3 2E			      mov    bl,2EH	     ; atributo	(fundo verde e caracteres amarelo claro)
+    246	00BA  B7 00			      mov    bh,0	     ; numero da pagina	(zero =	primeira)
+    247	00BC  B0 34			      mov    al,'4'
+    248	00BE  B4 09			      mov    ah,9	   ; set cursor	position
+    249	00C0  CD 10			      int    10h	   ; chamada BIOS (video)
+    250	00C2  BA 011Dr			      lea    dx,msg4	   ; endereco da mensagem em DX
+    251	00C5  E8 00B7			      call   write
+    252	00C8  E8 00B9			      call   espera_tecla
+    253				     ;
+    254				     ;	Repete 16 vezes	(para cada cor de fundo)
+    255				     ;
+    256	00CB  C6 06 021Br 00		      mov    fundo,0
+    257	00D0  A1 01D7r			      mov    ax, ecor
+    258	00D3  A3 021Dr			      mov    corfundo, ax
+    259
+    260	00D6			     laco_fundo:
+    261					      ;	limpa a	tela
+    262	00D6  B6 18			      mov    dh,24	     ; linha 24
+    263	00D8  B2 4F			      mov    dl,79	   ; coluna 79
+    264	00DA  B5 00			      mov    ch,0	     ; linha zero
+    265	00DC  B1 00			      mov    cl,0	     ; coluna zero
+    266	00DE  B7 07			      mov    bh,07h	   ; atributo de preenchimento (letras cinzas)
+    267	00E0  B0 00			      mov    al,0	     ; numero de linhas	(zero =	toda a janela)
+    268	00E2  B4 06			      mov    ah,6	   ; scroll window up
+    269	00E4  CD 10			      int    10h	   ; chamada BIOS (video)
+    270					      ;	posiciona cursor em (0,0)
+    271	00E6  B6 00			      mov    dh,0	     ; linha zero
+    272	00E8  B2 00			      mov    dl,0	     ; coluna zero
+    273	00EA  B7 00			      mov    bh,0	     ; numero da pagina	(zero =	primeira)
+    274	00EC  B4 02			      mov    ah,2	   ; set cursor	position
+    275	00EE  CD 10			      int    10h	   ; chamada BIOS (video)
+    276
+    277	00F0  C6 06 0219r 00		      mov    letra,0
+    278	00F5  A1 01D7r			      mov    ax, ecor
+    279	00F8  A3 021Fr			      mov    corletra, ax
+    280	00FB			     laco_letra:
+    281	00FB  8A 36 0219r		      mov    dh,letra	     ; linha definida por letra
+    282	00FF  B2 00			      mov    dl,0	     ; coluna 0
+    283	0101  B7 00			      mov    bh,0	     ; numero da pagina	(zero =	primeira)
+    284	0103  B4 02			      mov    ah,2	   ; set cursor	position
+    285	0105  CD 10			      int    10h	   ; chamada BIOS (video)
+Turbo Assembler	 Version 3.2	    12/04/18 00:45:20	    Page 6
+VIDEO.ASM
+
+
+
+    286	0107  B9 0050			      mov    cx,80	     ; numero de vezes a escrever caracter
+    287	010A  8A 1E 021Br		      mov    bl,fundo
+    288	010E  D0 E3 D0 E3 D0 E3	D0+	      shl    bl,4
+    289	      E3
+    290	0116  0A 1E 0219r		      or     bl,letra	   ; bl	= atributo (fundo*16 + letra)
+    291	011A  B7 00			      mov    bh,0	   ; numero da pagina (zero = primeira)
+    292	011C  B0 20			      mov    al,' '
+    293	011E  B4 09			      mov    ah,9
+    294	0120  CD 10			      int    10h
+    295	0122  BA 01F7r			      lea    dx, mfundo
+    296	0125  E8 0057			      call   write
+    297	0128  8B 16 021Dr		      mov    dx, corfundo
+    298	012C  E8 0050			      call   write
+    299	012F  BA 0206r			      lea    dx, mletra
+    300	0132  E8 004A			      call   write
+    301	0135  8B 16 021Fr		      mov    dx, corletra
+    302	0139  E8 0043			      call   write
+    303
+    304	013C  80 06 0219r 01		      add    letra,1
+    305	0141  BE 01D7r			      lea    si, ecor
+    306	0144  03 36 0219r		      add    si, word ptr letra
+    307	0148  03 36 0219r		      add    si, word ptr letra
+    308	014C  8B 04			      mov    ax,[si]
+    309	014E  A3 021Fr			      mov    corletra, ax
+    310	0151  80 3E 0219r 0F		      cmp    letra,15
+    311	0156  7E A3			      jle    laco_letra
+    312
+    313	0158  E8 0029			      call    espera_tecla
+    314
+    315	015B  80 06 021Br 01		      add    fundo,1
+    316	0160  BE 01D7r			      lea    si, ecor
+    317	0163  03 36 021Br		      add    si, word ptr fundo
+    318	0167  03 36 021Br		      add    si, word ptr fundo
+    319	016B  8B 04			      mov    ax,[si]
+    320	016D  A3 021Dr			      mov    corfundo, ax
+    321	0170  80 3E 021Br 0F		      cmp    fundo,15
+    322	0175  7F 03			      jg     fim
+    323	0177  E9 FF5C			      jmp    laco_fundo
+    324
+    325	017A			     fim:
+    326
+    327				     ; retorno ao DOS com codigo de retorno 0 no AL (fim normal)
+    328	017A  B8 4C00			      mov    ax,4c00h		; funcao retornar ao DOS no AH
+    329	017D  CD 21			      int    21h		; chamada do DOS
+    330
+    331	017F			     write   proc
+    332					     ; assume que dx aponta para a mensagem
+    333	017F  B4 09			      mov    ah,9		; funcao exibir	mensagem no AH
+    334	0181  CD 21			      int    21h		; chamada do DOS
+    335	0183  C3			      ret
+    336	0184			     write   endp
+    337
+    338	0184			     espera_tecla proc
+    339	0184  B4 00			      mov    ah,0		; funcao esperar tecla no AH
+    340	0186  CD 16			      int    16h		; chamada do DOS
+    341	0188  C3			      ret
+    342	0189			     espera_tecla endp
+Turbo Assembler	 Version 3.2	    12/04/18 00:45:20	    Page 7
+VIDEO.ASM
+
+
+
+    343
+    344	0189			     codigo   ends
+    345
+    346				     ; a diretiva a seguir indica o fim	do codigo fonte	(ultima	linha do arquivo)
+    347					      end    inicio   ;	para o programa	iniciar	em "inicio" quando for executado
+Turbo Assembler	 Version 3.2	    12/04/18 00:45:20	    Page 8
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "12/04/18"
+??FILENAME			  Text	 "VIDEO	  "
+??TIME				  Text	 "00:45:20"
+??VERSION			  Number 0314
+@CPU				  Text	 0101H
+@CURSEG				  Text	 CODIGO
+@FILENAME			  Text	 VIDEO
+@WORDSIZE			  Text	 2
+COR0				  Byte	 DADOS:0140
+COR1				  Byte	 DADOS:0146
+COR10				  Byte	 DADOS:0193
+COR11				  Byte	 DADOS:019F
+COR12				  Byte	 DADOS:01AB
+COR13				  Byte	 DADOS:01BA
+COR14				  Byte	 DADOS:01C8
+COR15				  Byte	 DADOS:01D0
+COR2				  Byte	 DADOS:014B
+COR3				  Byte	 DADOS:0151
+COR4				  Byte	 DADOS:0157
+COR5				  Byte	 DADOS:0160
+COR6				  Byte	 DADOS:0168
+COR7				  Byte	 DADOS:016F
+COR8				  Byte	 DADOS:017B
+COR9				  Byte	 DADOS:0188
+CORFUNDO			  Word	 DADOS:021D
+CORLETRA			  Word	 DADOS:021F
+CR				  Number 000D
+ECOR				  Word	 DADOS:01D7
+ESPERA_TECLA			  Near	 CODIGO:0184
+FIM				  Near	 CODIGO:017A
+FUNDO				  Byte	 DADOS:021B
+INICIO				  Near	 CODIGO:0000
+LACO_FUNDO			  Near	 CODIGO:00D6
+LACO_LETRA			  Near	 CODIGO:00FB
+LETRA				  Byte	 DADOS:0219
+LF				  Number 000A
+MFUNDO				  Byte	 DADOS:01F7
+MLETRA				  Byte	 DADOS:0206
+MSG1				  Byte	 DADOS:0000
+MSG2				  Byte	 DADOS:00B4
+MSG3				  Byte	 DADOS:00E6
+MSG4				  Byte	 DADOS:011D
+WRITE				  Near	 CODIGO:017F
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+CODIGO				  16  0189 Para	  none
+DADOS				  16  0221 Para	  none
+PILHA				  16  0100 Para	  Stack
+

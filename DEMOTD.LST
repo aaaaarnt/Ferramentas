@@ -1,0 +1,117 @@
+Turbo Assembler	 Version 3.2	    10/30/18 17:15:36	    Page 1
+DEMOTD.ASM
+
+
+
+      1					      assume cs:codigo,ds:dados,es:dados,ss:pilha
+      2
+      3	      =000D		     CR	      EQU    0DH ; constante - codigo ASCII do caractere "carriage return"
+      4	      =000A		     LF	      EQU    0AH ; constante - codigo ASCII do caractere "line feed"
+      5
+      6				     ; definicao do segmento de	dados do programa
+      7	0000			     dados    segment
+      8	0000  3E 3E 3E 20 49 6E	69+  inidados db     '>>> Inicio do segmento DADOS <<<'
+      9	      63 69 6F 20 64 6F	20+
+     10	      73 65 67 6D 65 6E	74+
+     11	      6F 20 44 41 44 4F	53+
+     12	      20 3C 3C 3C
+     13	0020  FF		     baite    db     255
+     14	0021  FFFF		     palavra  dw     65535
+     15	0023  31 32		     digitos1 db     '1','2'
+     16	0025  3334		     digitos2 dw     '34'
+     17	0027  20		     espaco   db     ' '
+     18	0028  50 72 6F 67 72 61	6D+  mensagem db     'Programa para demonstrar o uso do	depurador TD',CR,LF,'$'
+     19	      61 20 70 61 72 61	20+
+     20	      64 65 6D 6F 6E 73	74+
+     21	      72 61 72 20 6F 20	75+
+     22	      73 6F 20 64 6F 20	64+
+     23	      65 70 75 72 61 64	6F+
+     24	      72 20 54 44 0D 0A	24
+     25	0059			     dados    ends
+     26
+     27				     ; definicao do segmento de	pilha do programa
+     28	0000			     pilha    segment stack ; permite inicializacao automatica de SS:SP
+     29	0000  80*(4040)			      dw     128 dup('@@')
+     30	0100			     pilha    ends
+     31
+     32				     ; definicao do segmento de	codigo do programa
+     33	0000			     codigo   segment
+     34	0000			     inicio:  ;	CS e IP	sao inicializados com este endereco
+     35	0000  B8 0000s			      mov    ax,dados ;	inicializa DS
+     36	0003  8E D8			      mov    ds,ax    ;	com endereco do	segmento DADOS
+     37	0005  8E C0			      mov    es,ax    ;	idem em	ES
+     38				     ; fim da carga inicial dos	registradores de segmento
+     39				     ;
+     40				     ; a partir	daqui, as instrucoes especificas para cada programa
+     41				     ; neste exemplo, o	programa apenas	exibe uma mensagem na tela
+     42				     ; e devolve o controle para o sistema operacional (DOS)
+     43	0007  BA 0028r			      lea    dx,mensagem	  ; endereco da	mensagem em DX
+     44	000A  B4 09			      mov    ah,9		  ; funcao exibir mensagem no AH
+     45	000C  CD 21			      int    21h		  ; chamada do DOS
+     46				     ;
+     47	000E  A1 0021r			      mov    ax,palavra		  ; AX = FFFFh
+     48	0011  8A 0E 0023r		      mov    cl,digitos1	  ; CL = 31h
+     49	0015  8A 2E 0025r		      mov    ch,byte ptr digitos2 ; CH = 33h
+     50	0019  8A 16 0020r		      mov    dl,baite		  ; DL = FFh
+     51	001D  E8 000C			      call   subrot
+     52	0020  A3 0021r			      mov    palavra,ax		  ; palavra =
+     53	0023  89 0E 0025r		      mov    digitos2,cx	  ; digitos2 =
+     54				     ; retorno ao DOS com codigo de retorno 0 no AL (fim normal)
+     55	0027			     fim:
+     56	0027  B8 4C00			      mov    ax,4c00h		; funcao retornar ao DOS no AH
+     57	002A  CD 21			      int    21h		; chamada do DOS
+Turbo Assembler	 Version 3.2	    10/30/18 17:15:36	    Page 2
+DEMOTD.ASM
+
+
+
+     58
+     59	002C			     subrot   proc
+     60	002C  FE C0			      inc    al
+     61	002E  FE CC			      dec    ah
+     62	0030  91			      xchg   ax,cx
+     63	0031  FE C0			      inc    al
+     64	0033  FE CC			      dec    ah
+     65	0035  C3			      ret
+     66	0036			     subrot   endp
+     67
+     68	0036			     codigo   ends
+     69
+     70				     ; a diretiva a seguir indica o fim	do codigo fonte	(ultima	linha do arquivo)
+     71				     ; e informa que o programa	deve começar a execucao	no rotulo "inicio"
+     72					      end    inicio
+Turbo Assembler	 Version 3.2	    10/30/18 17:15:36	    Page 3
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "10/30/18"
+??FILENAME			  Text	 "DEMOTD  "
+??TIME				  Text	 "17:15:36"
+??VERSION			  Number 0314
+@CPU				  Text	 0101H
+@CURSEG				  Text	 CODIGO
+@FILENAME			  Text	 DEMOTD
+@WORDSIZE			  Text	 2
+BAITE				  Byte	 DADOS:0020
+CR				  Number 000D
+DIGITOS1			  Byte	 DADOS:0023
+DIGITOS2			  Word	 DADOS:0025
+ESPACO				  Byte	 DADOS:0027
+FIM				  Near	 CODIGO:0027
+INICIO				  Near	 CODIGO:0000
+INIDADOS			  Byte	 DADOS:0000
+LF				  Number 000A
+MENSAGEM			  Byte	 DADOS:0028
+PALAVRA				  Word	 DADOS:0021
+SUBROT				  Near	 CODIGO:002C
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+CODIGO				  16  0036 Para	  none
+DADOS				  16  0059 Para	  none
+PILHA				  16  0100 Para	  Stack
+
